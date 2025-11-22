@@ -33,3 +33,8 @@ Thumbs.db
 *.tmp
 .temp/
 
+# Documentation (하드웨어사용 가이드 제외)
+backend/*.md
+!backend/README.md
+!backend/HARDWARE_API_GUIDE_SIMPLE.md
+
