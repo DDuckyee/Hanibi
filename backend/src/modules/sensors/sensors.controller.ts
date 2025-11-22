@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, UseInterceptors } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { RequestLoggingInterceptor } from '../../common/interceptors/request-logging.interceptor';
 import { HeartbeatDto } from './dto/heartbeat.dto';
 import { SensorDataDto } from './dto/sensor-data.dto';
@@ -18,7 +18,56 @@ export class SensorsController {
   @UseInterceptors(RequestLoggingInterceptor)
   @ApiOperation({
     summary: '센서 데이터 수신',
-    description: '하드웨어가 주기적으로 센서 데이터를 전송할 때 호출합니다.',
+    description: '하드웨어가 주기적으로 센서 데이터를 전송할 때 호출합니다. timestamp와 sessionId는 선택사항입니다.',
+  })
+  @ApiBody({
+    type: SensorDataDto,
+    description: '센서 데이터 (최소 필수 필드만 포함한 예시)',
+    examples: {
+      minimal: {
+        summary: '최소 필수 필드 (권장)',
+        description: 'timestamp와 sessionId 없이도 동작합니다',
+        value: {
+          deviceId: 'HANIBI-001',
+          sensorData: {
+            temperature: 25.5,
+            humidity: 65,
+            weight: 1250.5,
+            gas: 320,
+          },
+          processingStatus: 'PROCESSING',
+        },
+      },
+      withTimestamp: {
+        summary: 'timestamp 포함 (선택)',
+        description: '오프라인 모드나 배치 전송 시 사용',
+        value: {
+          deviceId: 'HANIBI-001',
+          timestamp: '2025-11-11T10:00:00.000Z',
+          sensorData: {
+            temperature: 25.5,
+            humidity: 65,
+            weight: 1250.5,
+            gas: 320,
+          },
+          processingStatus: 'PROCESSING',
+        },
+      },
+      withSensorError: {
+        summary: '센서 오류 (-999)',
+        description: '센서 오류 시 -999로 전송',
+        value: {
+          deviceId: 'HANIBI-001',
+          sensorData: {
+            temperature: 25.5,
+            humidity: -999,
+            weight: 1250.5,
+            gas: 320,
+          },
+          processingStatus: 'PROCESSING',
+        },
+      },
+    },
   })
   async ingestSensorData(@Body() payload: SensorDataDto) {
     const result = await this.sensorsService.processSensorData(payload);

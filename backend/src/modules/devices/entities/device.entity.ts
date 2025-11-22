@@ -45,6 +45,19 @@ export class Device extends BaseEntity {
   @Column({ type: 'simple-json', nullable: true })
   deviceConfig?: Record<string, any>;
 
+  // 카메라 관련 필드
+  @Column({ type: 'varchar', length: 500, nullable: true, default: null })
+  rtspUrl?: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, default: null })
+  cameraModel?: string | null;
+
+  @Column({ type: 'varchar', length: 128, nullable: true, default: null })
+  cameraUsername?: string | null;
+
+  @Column({ type: 'varchar', length: 128, nullable: true, default: null })
+  cameraPassword?: string | null;
+
   @OneToMany(() => SensorData, (data) => data.device)
   sensorData: SensorData[];
 

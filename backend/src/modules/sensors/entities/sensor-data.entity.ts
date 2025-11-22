@@ -25,9 +25,6 @@ export class SensorData extends BaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   gas?: number;
 
-  @Column({ type: 'int', nullable: true })
-  error?: number;
-
   @Column({ type: 'simple-json', nullable: true })
   rawSensorData?: Record<string, any>;
 

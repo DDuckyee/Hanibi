@@ -62,10 +62,13 @@ export class SensorsService {
   ): Promise<{ data: SensorDataResponse; config: SensorConfigResponse }> {
     const sanitizedValues = this.sanitizeSensorValues(payload.sensorData);
 
+    // timestamp가 없으면 현재 시간 사용 (하드웨어 개발 편의성)
+    const measuredAt = payload.timestamp ? new Date(payload.timestamp) : new Date();
+
     const device = await this.devicesService.findOrCreateByDeviceId(payload.deviceId);
     device.deviceStatus = this.mapProcessingStatus(payload.processingStatus);
     device.connectionStatus = DeviceConnectionStatus.Online;
-    device.lastHeartbeat = new Date(payload.timestamp);
+    device.lastHeartbeat = measuredAt;
     await this.sensorDataRepository.manager.save(device);
 
     const session = payload.sessionId
@@ -79,15 +82,14 @@ export class SensorsService {
       humidity: sanitizedValues.humidity ?? null,
       weight: sanitizedValues.weight ?? null,
       gas: sanitizedValues.gas ?? null,
-      error: sanitizedValues.error ?? null,
-      measuredAt: new Date(payload.timestamp),
+      measuredAt,
       rawSensorData: payload.sensorData,
     } as DeepPartial<SensorData>);
 
     await this.sensorDataRepository.save(sensorEntity);
     await this.sensorQueueProducer.enqueueSensorData({
       deviceId: payload.deviceId,
-      measuredAt: payload.timestamp,
+      measuredAt: measuredAt.toISOString(),
       metrics: {
         temperature: sanitizedValues.temperature ?? null,
         humidity: sanitizedValues.humidity ?? null,
@@ -98,7 +100,7 @@ export class SensorsService {
 
     this.sensorsGateway.broadcastSensorUpdate({
       deviceId: payload.deviceId,
-      measuredAt: payload.timestamp,
+      measuredAt: measuredAt.toISOString(),
       metrics: {
         temperature: sanitizedValues.temperature ?? null,
         humidity: sanitizedValues.humidity ?? null,
@@ -132,9 +134,12 @@ export class SensorsService {
   async processHeartbeat(payload: HeartbeatDto): Promise<{ data: HeartbeatResponse; config: Record<string, number> }> {
     this.logger.debug(`하트비트 수신: deviceId=${payload.deviceId}`);
 
+    // timestamp가 없으면 현재 시간 사용
+    const heartbeatTime = payload.timestamp ? new Date(payload.timestamp) : new Date();
+
     const device = await this.devicesService.findOrCreateByDeviceId(payload.deviceId);
     device.connectionStatus = DeviceConnectionStatus.Online;
-    device.lastHeartbeat = new Date(payload.timestamp);
+    device.lastHeartbeat = heartbeatTime;
     await this.sensorDataRepository.manager.save(device);
 
     const response: HeartbeatResponse = {
@@ -154,6 +159,9 @@ export class SensorsService {
   async handleEvent(payload: SensorEventDto): Promise<{ data: EventResponse }> {
     this.logger.log(`이벤트 수신: ${payload.eventType} (deviceId=${payload.deviceId})`);
 
+    // timestamp가 없으면 현재 시간 사용
+    const eventTime = payload.timestamp ? new Date(payload.timestamp) : new Date();
+
     const device = await this.devicesService.findOrCreateByDeviceId(payload.deviceId);
 
     switch (payload.eventType) {
@@ -161,7 +169,7 @@ export class SensorsService {
       case SensorEventType.FoodInputAfter:
         await this.characterQueueProducer.enqueueCharacterState({
           deviceId: payload.deviceId,
-          triggeredAt: payload.timestamp ?? new Date().toISOString(),
+          triggeredAt: eventTime.toISOString(),
           stateRuleId: undefined,
         });
         return {

@@ -18,8 +18,10 @@ const resolveBoolean = (value: string | boolean | undefined, defaultValue: boole
 };
 
 export const buildTypeOrmConfig = (configService: ConfigService): TypeOrmModuleOptions => {
-  const isProd = configService.get<string>('NODE_ENV') === 'production';
-  const isTest = configService.get<string>('NODE_ENV') === 'test';
+  const nodeEnv = configService.get<string>('NODE_ENV', 'development');
+  const isProd = nodeEnv === 'production';
+  const isDev = nodeEnv === 'development';
+  const isTest = nodeEnv === 'test';
 
   if (isTest) {
     return {
@@ -33,9 +35,11 @@ export const buildTypeOrmConfig = (configService: ConfigService): TypeOrmModuleO
 
   const url = configService.get<string>('DATABASE_URL');
 
+  // 개발 환경에서는 기본적으로 synchronize 활성화 (DB_SYNCHRONIZE가 명시되지 않은 경우)
+  const defaultSynchronize = isDev ? true : false;
   const parsedSynchronize = resolveBoolean(
     configService.get<string | boolean>('DB_SYNCHRONIZE'),
-    false,
+    defaultSynchronize,
   );
 
   const parsedLogging = resolveBoolean(
@@ -43,13 +47,16 @@ export const buildTypeOrmConfig = (configService: ConfigService): TypeOrmModuleO
     !isProd,
   );
 
+  // synchronize가 true일 때 로깅 활성화하여 스키마 변경 확인
+  const shouldLogQueries = parsedSynchronize || parsedLogging;
+
   if (url) {
     return {
       type: 'postgres',
       url,
       autoLoadEntities: true,
       synchronize: parsedSynchronize,
-      logging: parsedLogging,
+      logging: shouldLogQueries ? ['query', 'error', 'schema'] : parsedLogging,
     };
   }
 
@@ -62,7 +69,7 @@ export const buildTypeOrmConfig = (configService: ConfigService): TypeOrmModuleO
     database: configService.get<string>('DB_NAME', DEFAULT_DB_NAME),
     autoLoadEntities: true,
     synchronize: parsedSynchronize,
-    logging: parsedLogging,
+    logging: shouldLogQueries ? ['query', 'error', 'schema'] : parsedLogging,
   };
 };
 

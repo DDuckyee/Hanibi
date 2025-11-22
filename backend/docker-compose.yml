@@ -7,41 +7,56 @@ services:
       dockerfile: Dockerfile
     container_name: hanibi-backend
     ports:
-      - "${PORT:-3000}:3000"
+      - "3000:3000"
     env_file:
-      - ./env/docker.env
+      - .env.production
+    environment:
+      # 개발 환경으로 오버라이드 (DB는 유지)
+      - NODE_ENV=development
+    volumes:
+      # 소스 코드를 마운트하여 핫리로드 가능
+      - ./src:/app/src:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./nest-cli.json:/app/nest-cli.json:ro
+      # node_modules는 컨테이너 내부 것 사용
+      - /app/node_modules
+      # snapshots 디렉토리를 호스트와 공유 (이미지 확인 및 백업용)
+      - ./snapshots:/app/snapshots
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: unless-stopped
+    restart: always
 
   postgres:
     image: postgres:14
     container_name: hanibi-postgres
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-hanibi}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-hanibi}
-      POSTGRES_DB: ${DB_NAME:-hanibi}
+      POSTGRES_USER: hanibi
+      POSTGRES_PASSWORD: HanibiSecure2024!@#
+      POSTGRES_DB: hanibi
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "5432:5432"
+    volumes:
+      - /home/ubuntu/data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-hanibi} -d ${DB_NAME:-hanibi}"]
+      test: ["CMD-SHELL", "pg_isready -U hanibi -d hanibi"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+    restart: always
 
   redis:
     image: redis:7-alpine
     container_name: hanibi-redis
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "6379:6379"
+    volumes:
+      - /home/ubuntu/data/redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
-
+    restart: always

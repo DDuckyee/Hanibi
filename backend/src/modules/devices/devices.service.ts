@@ -71,6 +71,35 @@ export class DevicesService {
     return device;
   }
 
+  async updateCameraInfo(
+    deviceId: string,
+    rtspUrl: string,
+    cameraModel?: string,
+    username?: string,
+    password?: string,
+  ): Promise<Device> {
+    const device = await this.findOrCreateByDeviceId(deviceId);
+    device.rtspUrl = rtspUrl;
+    device.cameraModel = cameraModel;
+    device.cameraUsername = username;
+    device.cameraPassword = password;
+    device.connectionStatus = DeviceConnectionStatus.Online;
+    device.lastHeartbeat = new Date();
+    return this.devicesRepository.save(device);
+  }
+
+  async removeCameraInfo(deviceId: string): Promise<Device> {
+    const device = await this.findByDeviceId(deviceId);
+    if (!device) {
+      throw new NotFoundException(`deviceId=${deviceId} 기기를 찾을 수 없습니다.`);
+    }
+    device.rtspUrl = null;
+    device.cameraModel = null;
+    device.cameraUsername = null;
+    device.cameraPassword = null;
+    return this.devicesRepository.save(device);
+  }
+
   async findAllByUser(userId: string): Promise<Device[]> {
     return this.devicesRepository.find({
       where: {

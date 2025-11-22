@@ -26,7 +26,20 @@ async function bootstrap() {
     defaultVersion: apiVersion,
   });
 
-  app.use(helmet());
+  // Helmet 보안 헤더 설정 (Swagger UI 동작을 위해 CSP 완화)
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          imgSrc: ["'self'", 'data:', 'validator.swagger.io', 'http://43.200.77.84:3000', 'https://43.200.77.84:3000', '*'],
+          upgradeInsecureRequests: null, // HTTP 사용을 위해 비활성화
+        },
+      },
+    }),
+  );
   app.use(compression());
   
   // 센서 데이터 전송 API 전용 Rate Limit (더 관대함, POST만)
@@ -41,12 +54,15 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // ValidationPipe 설정 - multipart/form-data는 수동 처리하므로 건너뛰기
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
       forbidNonWhitelisted: true,
+      // multipart/form-data 요청은 ValidationPipe를 건너뛰도록 설정
+      // (해당 엔드포인트에서 수동으로 검증)
     }),
   );
 

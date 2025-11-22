@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from './common/logger/logger.module';
+import { ApiRequestLog } from './common/entities/api-request-log.entity';
+import { GlobalLoggingInterceptor } from './common/interceptors/global-logging.interceptor';
 import { validate } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { QueueModule } from './queues/queue.module';
@@ -16,9 +20,11 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { CharacterModule } from './modules/character/character.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { LogsModule } from './modules/logs/logs.module';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([ApiRequestLog]),
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
@@ -40,7 +46,14 @@ import { SettingsModule } from './modules/settings/settings.module';
     CharacterModule,
     SettingsModule,
     CameraModule,
+    LogsModule,
     WorkersModule,
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: GlobalLoggingInterceptor,
+    },
   ],
 })
 export class AppModule {}
