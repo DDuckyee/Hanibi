@@ -38,3 +38,6 @@ backend/*.md
 !backend/README.md
 !backend/HARDWARE_API_GUIDE_SIMPLE.md
 
+# Test snapshots (테스트용 스냅샷 이미지)
+backend/snapshots/
+
